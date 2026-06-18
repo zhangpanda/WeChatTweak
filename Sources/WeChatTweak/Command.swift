@@ -36,23 +36,22 @@ struct Command {
 
     @discardableResult
     private static func execute(command: String) async throws -> String? {
-        guard let script = NSAppleScript(source: "do shell script \"\(command)\"") else {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", command]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        try process.run()
+        process.waitUntilExit()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: data, encoding: .utf8)
+        if process.terminationStatus != 0 {
             throw Error.executing(
                 command: command,
-                error: ["error": "Create script failed."]
+                error: ["error": output ?? "unknown error"]
             )
         }
-
-        var error: NSDictionary?
-        let descriptor = script.executeAndReturnError(&error)
-
-        if let error = error {
-            throw Error.executing(
-                command: command,
-                error: error
-            )
-        } else {
-            return descriptor.stringValue
-        }
+        return output?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
