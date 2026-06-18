@@ -79,6 +79,7 @@ struct Config: Decodable {
     }
 
     let version: String
+    let binary: String?
     let targets: [Target]
 
     static func load(url: URL) async throws -> [Config] {
